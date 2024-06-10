@@ -1,0 +1,33 @@
+@routes.route('/categories', methods=['GET', 'POST'])
+@jwt_required()
+def manage_categories():
+    user_id = get_jwt_identity()
+    if request.method == 'POST':
+        data = request.get_json()
+        category = Category(name=data['name'], color=data.get('color', '#ffffff'), user_id=user_id)
+        db.session.add(category)
+        db.session.commit()
+        return jsonify({'message': 'Category added successfully!'}), 201
+    
+    categories = Category.query.filter_by(user_id=user_id).all()
+    return render_template('categories.html', categories=categories)
+
+@routes.route('/categories/<int:id>', methods=['PUT', 'DELETE'])
+@jwt_required()
+def update_delete_category(id):
+    user_id = get_jwt_identity()
+    category = Category.query.get_or_404(id)
+    if category.user_id != user_id:
+        return jsonify({'message': 'Unauthorized'}), 403
+    
+    if request.method == 'PUT':
+        data = request.get_json()
+        category.name = data['name']
+        category.color = data.get('color', category.color)
+        db.session.commit()
+        return jsonify({'message': 'Category updated successfully!'})
+    
+    if request.method == 'DELETE':
+        db.session.delete(category)
+        db.session.commit()
+        return jsonify({'message': 'Category deleted successfully!'})
